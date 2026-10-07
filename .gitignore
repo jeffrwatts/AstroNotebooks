@@ -1,0 +1,15 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Bayestar19 dust map (~700 MB, downloaded on demand)
+.dustmaps_data/
+
+# macOS
+.DS_Store

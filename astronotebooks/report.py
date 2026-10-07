@@ -1,0 +1,60 @@
+"""Summary tables."""
+
+import numpy as np
+import pandas as pd
+
+PC_TO_LY = 3.2616
+
+_GOOD, _BAD = "color: #006300; font-weight: bold", "color: #d03b3b; font-weight: bold"
+
+
+def variable_star_summary(period, vsx_period, m, M, M_err, d_pc, d_err_pc, gaia,
+                          M_gaia=None, M_gaia_err=None, band="V"):
+    """Side-by-side table: what this notebook calculated vs. the catalogs.
+
+    The Check column says whether the two agree within their combined
+    1-sigma uncertainty (only for rows where both sides have one).
+    """
+    rows = []
+
+    def add(quantity, ours, theirs, delta="", check=""):
+        rows.append([quantity, ours, theirs, delta, check])
+
+    def verdict(diff, err):
+        return "agree" if abs(diff) <= err else "disagree"
+
+    if vsx_period:
+        add("Period", f"{period:.6f} d", f"{vsx_period:.6f} d (VSX)",
+            f"{(period - vsx_period) * 1440:+.2f} min")
+    else:
+        add("Period", f"{period:.6f} d", "not in VSX")
+
+    if gaia:
+        add(f"Apparent mag m ({band})", f"{m:.3f}", f"{gaia['G_mag']:.3f} (Gaia G)",
+            f"{m - gaia['G_mag']:+.3f}", "rough only: different band")
+    else:
+        add(f"Apparent mag m ({band})", f"{m:.3f}", "Gaia unavailable")
+
+    if gaia and M_gaia is not None:
+        add("Absolute mag M", f"{M:.3f} ± {M_err:.3f}", f"{M_gaia:.3f} ± {M_gaia_err:.3f} (Gaia)",
+            f"{M - M_gaia:+.3f}", verdict(M - M_gaia, np.hypot(M_err, M_gaia_err)))
+    else:
+        add("Absolute mag M", f"{M:.3f} ± {M_err:.3f}", "Gaia unavailable")
+
+    if gaia:
+        g, ge = gaia["d_pc"], gaia["d_err_pc"]
+        diff = d_pc - g
+        check = verdict(diff, np.hypot(d_err_pc, ge))
+        add("Distance (pc)", f"{d_pc:.0f} ± {d_err_pc:.0f}", f"{g:.0f} ± {ge:.0f} (Gaia)",
+            f"{diff:+.0f} ({100 * diff / g:+.1f}%)", check)
+        add("Distance (light years)", f"{d_pc * PC_TO_LY:.0f} ± {d_err_pc * PC_TO_LY:.0f}",
+            f"{g * PC_TO_LY:.0f} ± {ge * PC_TO_LY:.0f} (Gaia)", "", check)
+    else:
+        add("Distance (pc)", f"{d_pc:.0f} ± {d_err_pc:.0f}", "Gaia unavailable")
+
+    table = pd.DataFrame(rows, columns=["Quantity", "This notebook", "Catalog", "Difference", "Check"])
+
+    def color(val):
+        return {"agree": _GOOD, "disagree": _BAD}.get(val, "")
+
+    return table.style.hide(axis="index").map(color, subset=["Check"])

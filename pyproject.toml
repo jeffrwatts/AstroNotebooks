@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "astronotebooks"
+version = "0.1.0"
+description = "Distance-ladder notebooks for amateur astronomers, using AAVSO photometry"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    # science
+    "numpy",
+    "pandas",
+    "scipy",
+    "matplotlib",
+    "astropy>=6.0",
+    "astroquery>=0.4.7",
+    "requests",
+    "sncosmo>=2.10",          # SALT2 supernova light-curve model
+    "iminuit",                # the fitter sncosmo uses
+    "dustmaps; platform_system != 'Windows'",   # 3D dust map (no Windows support)
+    # notebooks
+    "jupyterlab",
+    "ipykernel",
+    "jinja2",                 # pandas table styling
+]
+
+[tool.setuptools]
+packages = ["astronotebooks"]
