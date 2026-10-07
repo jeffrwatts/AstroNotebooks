@@ -22,6 +22,7 @@ dependencies = [
     "dustmaps; platform_system != 'Windows'",   # 3D dust map (no Windows support)
     # notebooks
     "jupyterlab",
+    "notebook",               # so `jupyter notebook` works too
     "ipykernel",
     "jinja2",                 # pandas table styling
 ]

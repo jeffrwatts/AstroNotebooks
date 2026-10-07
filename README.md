@@ -65,7 +65,7 @@ science packages, JupyterLab, and this project's own helper library.
 jupyter lab
 ```
 
-Open one of the notebooks and choose **Run → Run All Cells**. Next time, you only
+(`jupyter notebook` works too, if you prefer the classic interface.) Open one of the notebooks and choose **Run → Run All Cells**. Next time, you only
 need to activate the environment (`source .venv/bin/activate`, or
 `.venv\Scripts\activate` on Windows) and run `jupyter lab`.
 
