@@ -83,6 +83,15 @@ Without the map, the notebook still runs but skips the dust correction (and
 reports a distance about 5–15% too large). The `dustmaps` package isn't
 available on Windows, so Windows users always skip this step.
 
+### Troubleshooting
+
+**`ModuleNotFoundError` (or "This notebook is running on ..., which is missing ...")**:
+Jupyter was started from a different Python than the project's environment. This
+is common if you also have Anaconda, whose own `jupyter` comes first on your PATH.
+Close Jupyter, activate the environment (step 2), and start `jupyter lab` again
+from that terminal. To check: `which jupyter` (Windows: `where jupyter`) should
+point inside `.venv`.
+
 **Internet required.** Both notebooks look things up online (VSX, SIMBAD, Gaia,
 NED, IRSA). If a service is slow or down, the notebook prints a message. Re-run
 the cell later.
