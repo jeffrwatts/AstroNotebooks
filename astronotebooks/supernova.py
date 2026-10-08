@@ -67,7 +67,9 @@ def check_fit(photdata, fitted_model, bounds, t0_tolerance_days=5.0):
 def fit_residuals(df, fit, photdata, t0_guess, phase_window=PHASE_WINDOW):
     """How far every fitted observation sits from the SALT2 model, in magnitudes.
 
-    Uses the same points the fit used (same bands, same time window). Returns a
+    Uses the same bands and time window as the fit. Pass the set-aside
+    observers' rows as `df` to see how they compare with a model they weren't
+    part of. Returns a
     DataFrame with one row per observation:
         FILT, observer, DATE, MAG, MERR
         phase      days from the fitted peak t0
@@ -83,10 +85,10 @@ def fit_residuals(df, fit, photdata, t0_guess, phase_window=PHASE_WINDOW):
         d = df.loc[df["FILT"] == filt].dropna(subset=["DATE", "MAG", "MERR"])
         phase = d["DATE"] - t0_guess
         d = d.loc[(phase >= phase_window[0]) & (phase <= phase_window[1])].copy()
-        d["model_mag"] = fit.bandmag(bandpass, ZPSYS, d["DATE"].to_numpy())
+        d["model_mag"] = fit.bandmag(bandpass, ZPSYS, d["DATE"].to_numpy()) if len(d) else []
         parts.append(d)
 
-    res = pd.concat(parts)
+    res = pd.concat(parts) if parts else df.iloc[0:0].assign(model_mag=[])
     if "observer" not in res.columns:
         res["observer"] = "unknown"
     res["phase"] = res["DATE"] - fit.get("t0")
