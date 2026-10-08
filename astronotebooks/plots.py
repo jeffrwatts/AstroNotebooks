@@ -73,6 +73,39 @@ def plot_folded(phase, mags, bin_centers, bin_mags, mean_mag, title):
     return fig, ax
 
 
+def plot_pl_lookup(rel, period, M, M_err, title=""):
+    """The period-luminosity line over its calibrated range, showing how a
+    measured period is read off as an absolute magnitude: a dotted line up
+    from log10(P) to the relation, then across to M."""
+    p_lo, p_hi = rel["period_range"]
+    p_lo, p_hi = min(p_lo, period / 1.5), max(p_hi, period * 1.5)   # keep the star on the plot
+    logP_grid = np.linspace(np.log10(p_lo), np.log10(p_hi), 200)
+    M_line = rel["a"] + rel["b"] * logP_grid
+    sig = np.sqrt(rel["a_err"] ** 2 + (logP_grid * rel["b_err"]) ** 2 + rel["sigma_intrinsic"] ** 2)
+    logP = np.log10(period)
+
+    fig, ax = plt.subplots(figsize=(8, 5.5))
+    ax.fill_between(logP_grid, M_line - sig, M_line + sig, color=BLUE, alpha=0.15, lw=0,
+                    label="± uncertainty (incl. star-to-star scatter)")
+    ax.plot(logP_grid, M_line, color=BLUE, lw=2,
+            label=f"{rel['label']}:  M = {rel['a']:.3f} {'−' if rel['b'] < 0 else '+'} {abs(rel['b']):.3f} log10(P)")
+
+    # Bottom of an inverted y-axis is its largest value.
+    y_bottom = M_line.max() + sig.max() + 0.3
+    x_left = logP_grid[0]
+    ax.plot([logP, logP], [y_bottom, M], ls=":", color=INK, lw=1.5)
+    ax.plot([logP, x_left], [M, M], ls=":", color=INK, lw=1.5)
+    ax.errorbar([logP], [M], yerr=[M_err], fmt="o", color=ORANGE, ms=8, capsize=4, zorder=3,
+                label=f"this star: log10(P) = {logP:.3f}  →  M = {M:.2f} ± {M_err:.2f}")
+
+    _style(ax, "log10(period / days)", "absolute magnitude M", title)
+    ax.set_xlim(x_left, logP_grid[-1])
+    ax.set_ylim(y_bottom, M_line.min() - sig.max() - 0.3)   # brighter (smaller M) at the top
+    ax.legend(frameon=False, loc="upper left", fontsize=9)   # the line runs bottom-left to top-right
+    fig.tight_layout()
+    return fig, ax
+
+
 def plot_pl_relation(rel, period, M_check=None, M_check_err=None, check_label="Gaia", title=""):
     """The period-luminosity line, zoomed to `period`, with its uncertainty
     bands, plus an optional independent M (e.g. from Gaia) to compare."""
