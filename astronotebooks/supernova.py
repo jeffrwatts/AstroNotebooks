@@ -1,6 +1,7 @@
 """Helpers for fitting a SALT2 light curve with sncosmo."""
 
 import numpy as np
+import pandas as pd
 from astropy.table import Table
 
 # AAVSO filter code -> sncosmo's built-in Bessell bandpass. Bessell (1990)
@@ -61,3 +62,34 @@ def check_fit(photdata, fitted_model, bounds, t0_tolerance_days=5.0):
     if ok:
         print("  fit looks healthy (peak inside the data, no parameter at its limit)")
     return ok
+
+
+def fit_residuals(df, fit, photdata, t0_guess, phase_window=PHASE_WINDOW):
+    """How far every fitted observation sits from the SALT2 model, in magnitudes.
+
+    Uses the same points the fit used (same bands, same time window). Returns a
+    DataFrame with one row per observation:
+        FILT, observer, DATE, MAG, MERR
+        phase      days from the fitted peak t0
+        model_mag  the model's magnitude at that time, in that band
+        resid      MAG - model_mag (negative = brighter than the model)
+        pull       resid / MERR (the miss, in units of the point's own error bar)
+    """
+    fitted = set(photdata["band"])
+    parts = []
+    for filt, bandpass in SALT2_BANDS.items():
+        if bandpass not in fitted:
+            continue
+        d = df.loc[df["FILT"] == filt].dropna(subset=["DATE", "MAG", "MERR"])
+        phase = d["DATE"] - t0_guess
+        d = d.loc[(phase >= phase_window[0]) & (phase <= phase_window[1])].copy()
+        d["model_mag"] = fit.bandmag(bandpass, ZPSYS, d["DATE"].to_numpy())
+        parts.append(d)
+
+    res = pd.concat(parts)
+    if "observer" not in res.columns:
+        res["observer"] = "unknown"
+    res["phase"] = res["DATE"] - fit.get("t0")
+    res["resid"] = res["MAG"] - res["model_mag"]
+    res["pull"] = res["resid"] / res["MERR"]
+    return res[["FILT", "observer", "DATE", "phase", "MAG", "MERR", "model_mag", "resid", "pull"]]

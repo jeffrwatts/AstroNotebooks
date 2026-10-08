@@ -216,3 +216,70 @@ def plot_distance_check(d_mpc, d_err_mpc, ned, title):
     fig.suptitle(title, fontsize=12)
     fig.tight_layout()
     return fig, axes
+
+
+def plot_band_fit(res, fit, band, my_observer=None, title=None):
+    """One band of the SALT2 fit, in detail.
+
+    Top: the model light curve and every observation used in the fit.
+    Bottom: each point's distance from the curve (data - model, in mag).
+    Points from `my_observer` are drawn larger, in black, so they stand out.
+    """
+    from .supernova import SALT2_BANDS, ZPSYS
+
+    color, marker = BAND_STYLES[band]
+    d = res[res["FILT"] == band]
+    if len(d) == 0:
+        print(f"No {band}-band points were used in the fit for this supernova.")
+        return None
+    mine = d[d["observer"] == my_observer] if my_observer else d.iloc[0:0]
+    others = d.drop(mine.index)
+
+    t0 = fit.get("t0")
+    grid = np.linspace(max(-10, d["phase"].min() - 3), 50, 400)
+    with np.errstate(all="ignore"):
+        model = fit.bandmag(SALT2_BANDS[band], ZPSYS, t0 + grid)
+    peak = np.nanmin(model)
+    peak_day = grid[np.nanargmin(model)]
+
+    fig, (ax, axr) = plt.subplots(2, 1, figsize=(10, 7), sharex=True,
+                                  gridspec_kw={"height_ratios": [3, 1.4], "hspace": 0.08})
+
+    # --- light curve ---
+    ax.plot(grid, model, color=color, lw=2, zorder=3, label="SALT2 best fit")
+    ax.errorbar(others["phase"], others["MAG"], yerr=others["MERR"], fmt=marker, ms=5,
+                color=color, alpha=0.55, elinewidth=0.8, capsize=0, zorder=2,
+                label=f"other observers ({len(others)} points)")
+    if len(mine):
+        ax.errorbar(mine["phase"], mine["MAG"], yerr=mine["MERR"], fmt=marker, ms=9,
+                    color=INK, mec="white", mew=0.8, elinewidth=1.2, capsize=3, zorder=4,
+                    label=f"{my_observer} ({len(mine)} points)")
+    ax.axvline(0, color=GRAY, ls=":", lw=1)
+    ax.plot([peak_day], [peak], marker="*", ms=12, color=color, mec=INK, mew=0.6, zorder=5,
+            ls="none", label=f"model peak: {peak:.2f} mag on day {peak_day:+.1f}")
+    _style(ax, "", f"{band} magnitude", title or f"{band} band: data vs. SALT2 model", invert_y=True)
+    lo = np.nanmin([d["MAG"].min(), peak]) - 0.25
+    hi = np.nanmax([d["MAG"].max(), np.nanmax(model)]) + 0.25
+    ax.set_ylim(hi, lo)
+    ax.legend(frameon=False, loc="upper right", fontsize=9)
+
+    # --- residuals ---
+    axr.axhspan(-0.05, 0.05, color=GRAY, alpha=0.15, lw=0, label="±0.05 mag")
+    axr.axhline(0, color=color, lw=1.5)
+    axr.errorbar(others["phase"], others["resid"], yerr=others["MERR"], fmt=marker, ms=4,
+                 color=color, alpha=0.55, elinewidth=0.8, capsize=0)
+    if len(mine):
+        axr.errorbar(mine["phase"], mine["resid"], yerr=mine["MERR"], fmt=marker, ms=8,
+                     color=INK, mec="white", mew=0.8, elinewidth=1.2, capsize=3, zorder=4)
+        for _, r in mine.iterrows():
+            axr.annotate(f"{r['resid']:+.3f}", (r["phase"], r["resid"]), xytext=(6, 0),
+                         textcoords="offset points", fontsize=8, color=INK, va="center")
+    _style(axr, "days from B-band peak (t0)", "data − model\n(mag)", "", invert_y=True)
+    lim = max(0.15, np.nanpercentile(np.abs(d["resid"]), 98) * 1.15,
+              np.abs(mine["resid"]).max() * 1.25 if len(mine) else 0)
+    axr.set_ylim(lim, -lim)   # inverted: brighter than the model is up, as in the top panel
+    axr.text(0.005, 0.95, "brighter than model ↑", transform=axr.transAxes, fontsize=8,
+             color=INK_2, va="top")
+    axr.legend(frameon=False, loc="upper right", fontsize=8)
+    fig.align_ylabels([ax, axr])
+    return fig, (ax, axr)
