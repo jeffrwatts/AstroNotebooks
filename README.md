@@ -133,7 +133,8 @@ and red ones are dimmer.
 1. **Milky Way dust** toward the host galaxy (NASA/IPAC dust map).
 2. **Redshift** of the host galaxy (NED).
 3. **Light-curve fit**: fit the SALT2 model to every observation in every band,
-   measuring the peak time, *stretch* $x_1$ and *color* $c$.
+   measuring the peak time, *stretch* $x_1$ and *color* $c$. A 0.03 mag error floor
+   is added to every point first, so no single observer dominates the fit.
 4. **Tripp estimator**: correct the standard peak brightness for stretch and color
    to get $M$.
 5. **Distance**: the distance modulus again.
@@ -143,12 +144,12 @@ and red ones are dimmer.
 
 | Supernova | Host | This notebook | NED-D (refined) | |
 |---|---|---|---|---|
-| SN 2011fe | M101 | 6.50 ± 0.52 Mpc | 7.10 ± 0.56 Mpc | |
-| SN 2011by | NGC 3972 | 23.3 ± 1.9 Mpc | 20.8 ± 0.7 Mpc | only one published distance |
-| SN 2012fr | NGC 1365 | 19.8 ± 1.6 Mpc | 18.6 ± 1.0 Mpc | |
-| SN 2014J | M82 | 2.93 ± 0.24 Mpc | 3.67 ± 0.27 Mpc | fails: M82's unusual dust |
-| SN 2025rbs | NGC 7331 | 14.8 ± 1.2 Mpc | 14.9 ± 0.9 Mpc | |
-| SN 2026aaiv | NGC 7331 | 15.1 ± 1.2 Mpc | 14.9 ± 0.9 Mpc | |
+| SN 2011fe | M101 | 6.75 ± 0.54 Mpc | 7.10 ± 0.56 Mpc | |
+| SN 2011by | NGC 3972 | 23.2 ± 1.9 Mpc | 20.8 ± 0.7 Mpc | only one published distance |
+| SN 2012fr | NGC 1365 | 19.7 ± 1.6 Mpc | 18.6 ± 1.0 Mpc | |
+| SN 2014J | M82 | 2.85 ± 0.23 Mpc | 3.67 ± 0.27 Mpc | fails: M82's unusual dust |
+| SN 2025rbs | NGC 7331 | 13.7 ± 1.1 Mpc | 14.9 ± 0.9 Mpc | host-galaxy light in R |
+| SN 2026aaiv | NGC 7331 | 13.5 ± 1.1 Mpc | 14.9 ± 0.9 Mpc | still being observed (data to +20 days) |
 
 To switch supernovae, change `SUPERNOVA = "SN 2026aaiv"` near the top of the notebook.
 
