@@ -97,3 +97,16 @@ def observer_fit_table(res, band, my_observer=None, max_rows=15):
              .format({"First day": "{:+.1f}", "Last day": "{:+.1f}", "Offset (mag)": "{:+.3f}",
                       "Scatter (mag)": "{:.3f}", "Quoted error (mag)": "{:.3f}",
                       "Typical |pull|": "{:.1f}"}, na_rep="–"))
+
+
+def agreement(d, d_err, ref, ref_err):
+    """How well two measurements agree, in units of their combined uncertainty.
+
+    Returns (n_sigma, tier):
+        within 1 sigma  -> "agrees"
+        1 to 2 sigma    -> "consistent"   (a correct measurement lands here about 27% of the time)
+        beyond 2 sigma  -> "disagrees"    (only about 5% of the time by chance)
+    """
+    n_sigma = abs(d - ref) / np.hypot(d_err, ref_err)
+    tier = "agrees" if n_sigma <= 1 else "consistent" if n_sigma <= 2 else "disagrees"
+    return n_sigma, tier

@@ -142,14 +142,14 @@ and red ones are dimmer.
 
 **Sample results:**
 
-| Supernova | Host | This notebook | NED-D (refined) | |
+| Supernova | Host | This notebook | NED-D (refined) | Comparison |
 |---|---|---|---|---|
-| SN 2011fe | M101 | 6.75 ± 0.54 Mpc | 7.10 ± 0.56 Mpc | |
-| SN 2011by | NGC 3972 | 23.2 ± 1.9 Mpc | 20.8 ± 0.7 Mpc | only one published distance |
-| SN 2012fr | NGC 1365 | 19.7 ± 1.6 Mpc | 18.6 ± 1.0 Mpc | |
-| SN 2014J | M82 | 2.85 ± 0.23 Mpc | 3.67 ± 0.27 Mpc | fails: M82's unusual dust |
-| SN 2025rbs | NGC 7331 | 13.7 ± 1.1 Mpc | 14.9 ± 0.9 Mpc | host-galaxy light in R |
-| SN 2026aaiv | NGC 7331 | 13.5 ± 1.1 Mpc | 14.9 ± 0.9 Mpc | still being observed (data to +20 days) |
+| SN 2011fe | M101 | 6.75 ± 0.54 Mpc | 7.10 ± 0.56 Mpc | agrees (0.5σ) |
+| SN 2011by | NGC 3972 | 23.2 ± 1.9 Mpc | 20.8 ± 0.7 Mpc | consistent (1.2σ); only one published distance |
+| SN 2012fr | NGC 1365 | 19.7 ± 1.6 Mpc | 18.6 ± 1.0 Mpc | agrees (0.6σ) |
+| SN 2014J | M82 | 2.85 ± 0.23 Mpc | 3.67 ± 0.27 Mpc | disagrees (2.3σ): M82's unusual dust |
+| SN 2025rbs | NGC 7331 | 13.7 ± 1.1 Mpc | 14.9 ± 0.9 Mpc | agrees (0.8σ); host-galaxy light in R |
+| SN 2026aaiv | NGC 7331 | 13.5 ± 1.1 Mpc | 14.9 ± 0.9 Mpc | consistent (1.0σ); still being observed (data to +20 days) |
 
 To switch supernovae, change `SUPERNOVA = "SN 2026aaiv"` near the top of the notebook.
 

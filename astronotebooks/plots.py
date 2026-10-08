@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 # Colors: one hue per job, with marker shapes as a second cue for color-blind readers.
 BLUE, ORANGE, GRAY = "#2a78d6", "#eb6834", "#898781"
 INK, INK_2, GRID = "#0b0b0b", "#52514e", "#e1e0d9"
-GOOD, BAD = "#0ca30c", "#d03b3b"
+GOOD, WARN, BAD = "#0ca30c", "#c98500", "#d03b3b"
 
 # Supernova bands, ordered blue -> red by wavelength.
 BAND_STYLES = {
@@ -189,14 +189,17 @@ def plot_distance_check(d_mpc, d_err_mpc, ned, title):
     """Our distance vs. NED-D's published distances ("all" and "refined").
 
     Gray band = range of the published values; gray diamond = their average;
-    colored dot = our measurement. PASS/FAIL is written out, not just colored.
+    colored dot = our measurement. The verdict ("agrees" within 1 sigma,
+    "consistent" within 2, "disagrees" beyond) is written out, not just colored.
     """
+    from .report import agreement
+
     fig, axes = plt.subplots(1, 2, figsize=(11, 3.8), sharex=True)
     for ax, key, name in [(axes[0], "all", "every published distance"),
                           (axes[1], "refined", "refined (Cepheid/TRGB/SBF/PNLF)")]:
         ref = ned[key]
-        passed = abs(d_mpc - ref["d_mpc"]) <= np.hypot(d_err_mpc, ref["d_err_mpc"])
-        color = GOOD if passed else BAD
+        n_sigma, tier = agreement(d_mpc, d_err_mpc, ref["d_mpc"], ref["d_err_mpc"])
+        color = {"agrees": GOOD, "consistent": WARN, "disagrees": BAD}[tier]
         ax.axvspan(*ref["range"], ymin=0.15, ymax=0.85, color=GRAY, alpha=0.2, lw=0,
                    label="range of published values")
         ax.errorbar([ref["d_mpc"]], [0.15], xerr=[ref["d_err_mpc"]], fmt="D", color=INK_2,
@@ -208,10 +211,9 @@ def plot_distance_check(d_mpc, d_err_mpc, ned, title):
         ax.spines[["top", "right", "left"]].set_visible(False)
         ax.grid(axis="x", color=GRID, lw=0.6)
         ax.set_xlabel("distance (Mpc)")
-        verdict = "PASS" if passed else "FAIL"
         ax.set_title(f"vs. {name}\n{d_mpc:.2f} ± {d_err_mpc:.2f}  vs.  "
-                     f"{ref['d_mpc']:.2f} ± {ref['d_err_mpc']:.2f} Mpc   {verdict}",
-                     fontsize=10, color=INK)
+                     f"{ref['d_mpc']:.2f} ± {ref['d_err_mpc']:.2f} Mpc:  "
+                     f"{tier.upper()} ({n_sigma:.1f}σ)", fontsize=10, color=INK)
         ax.legend(loc="lower right", fontsize=8, frameon=False)
     fig.suptitle(title, fontsize=12)
     fig.tight_layout()
