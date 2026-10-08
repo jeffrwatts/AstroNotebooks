@@ -78,6 +78,7 @@ def _load_extended_format(path):
     df = pd.DataFrame(rows, columns=header)
     for col in ["DATE", "MAG", "MERR"]:
         df[col] = pd.to_numeric(df[col], errors="coerce")
+    df.loc[df["MERR"] <= 0, "MERR"] = float("nan")   # a 0.000 uncertainty means "not reported"
     return df
 
 
@@ -87,6 +88,7 @@ def _load_aid_download(path):
     df["FILT"] = df["FILT"].map(lambda b: AID_BAND_CODES.get(str(b).strip().lower(), b))
     for col in ["DATE", "MAG", "MERR"]:
         df[col] = pd.to_numeric(df[col], errors="coerce")
+    df.loc[df["MERR"] <= 0, "MERR"] = float("nan")   # a 0.000 uncertainty means "not reported"
 
     if "fainterthan" in df.columns:
         faint = df["fainterthan"].astype(str).str.strip().str.lower() == "true"

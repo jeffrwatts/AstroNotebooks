@@ -143,7 +143,7 @@ and red ones are dimmer.
 
 | Supernova | Host | This notebook | NED-D (refined) | |
 |---|---|---|---|---|
-| SN 2011fe | M101 | 6.52 ± 0.52 Mpc | 7.10 ± 0.56 Mpc | |
+| SN 2011fe | M101 | 6.50 ± 0.52 Mpc | 7.10 ± 0.56 Mpc | |
 | SN 2011by | NGC 3972 | 23.3 ± 1.9 Mpc | 20.8 ± 0.7 Mpc | only one published distance |
 | SN 2012fr | NGC 1365 | 19.8 ± 1.6 Mpc | 18.6 ± 1.0 Mpc | |
 | SN 2014J | M82 | 2.93 ± 0.24 Mpc | 3.67 ± 0.27 Mpc | fails: M82's unusual dust |
