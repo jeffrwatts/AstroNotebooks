@@ -60,7 +60,7 @@ def variable_star_summary(period, vsx_period, m, M, M_err, d_pc, d_err_pc, gaia,
     return table.style.hide(axis="index").map(color, subset=["Check"])
 
 
-def observer_fit_table(res, band, my_observer=None, max_rows=15, excluded=None):
+def observer_fit_table(res, band, my_observer=None, max_rows=15):
     """Per-observer summary of how closely their points follow the model in one band.
 
     offset:  median (data - model) in mag; negative = brighter than the model
@@ -68,38 +68,10 @@ def observer_fit_table(res, band, my_observer=None, max_rows=15, excluded=None):
     |pull|:  median of |data - model| / quoted error bar (about 1 if the error bars are honest)
 
     Long tables are trimmed to the `max_rows` observers with the most points
-    (plus `my_observer`). Set-aside observers (`excluded`, from fit_residuals)
-    are added at the bottom, labeled "(set aside)".
+    (plus `my_observer`).
     """
     d = res[res["FILT"] == band]
-    t = _observer_stats(d)
-    if len(t) > max_rows:   # the busiest observers, plus yours wherever it ranks
-        keep = t.index[:max_rows].union(t.index[t["observer"] == my_observer])
-        print(f"showing the {max_rows} observers with the most {band}-band points "
-              f"(of {len(t)}){', plus ' + my_observer if my_observer in set(t['observer'][max_rows:]) else ''}")
-        t = t.loc[keep]
-    if excluded is not None:
-        x = _observer_stats(excluded[excluded["FILT"] == band])
-        x["observer"] = x["observer"] + " (set aside)"
-        t = pd.concat([t, x], ignore_index=True)
-    t.columns = ["Observer", "Points", "First day", "Last day", "Offset (mag)",
-                 "Scatter (mag)", "Quoted error (mag)", "Typical |pull|"]
-
-    def highlight(row):
-        if row["Observer"].endswith("(set aside)"):
-            return ["color: #898781; font-style: italic"] * len(row)
-        mine = row["Observer"] == my_observer
-        return ["font-weight: bold; background-color: #fff3c4" if mine else ""] * len(row)
-
-    return (t.style.hide(axis="index")
-             .apply(highlight, axis=1)
-             .format({"First day": "{:+.1f}", "Last day": "{:+.1f}", "Offset (mag)": "{:+.3f}",
-                      "Scatter (mag)": "{:.3f}", "Quoted error (mag)": "{:.3f}",
-                      "Typical |pull|": "{:.1f}"}, na_rep="–"))
-
-
-def _observer_stats(d):
-    return (d.groupby("observer")
+    t = (d.groupby("observer")
            .agg(points=("resid", "size"),
                 first_day=("phase", "min"), last_day=("phase", "max"),
                 offset=("resid", "median"),
@@ -108,3 +80,20 @@ def _observer_stats(d):
                 abs_pull=("pull", lambda p: np.median(np.abs(p))))
            .sort_values("points", ascending=False)
            .reset_index())
+    if len(t) > max_rows:   # the busiest observers, plus yours wherever it ranks
+        keep = t.index[:max_rows].union(t.index[t["observer"] == my_observer])
+        print(f"showing the {max_rows} observers with the most {band}-band points "
+              f"(of {len(t)}){', plus ' + my_observer if my_observer in set(t['observer'][max_rows:]) else ''}")
+        t = t.loc[keep]
+    t.columns = ["Observer", "Points", "First day", "Last day", "Offset (mag)",
+                 "Scatter (mag)", "Quoted error (mag)", "Typical |pull|"]
+
+    def highlight(row):
+        mine = row["Observer"] == my_observer
+        return ["font-weight: bold; background-color: #fff3c4" if mine else ""] * len(row)
+
+    return (t.style.hide(axis="index")
+             .apply(highlight, axis=1)
+             .format({"First day": "{:+.1f}", "Last day": "{:+.1f}", "Offset (mag)": "{:+.3f}",
+                      "Scatter (mag)": "{:.3f}", "Quoted error (mag)": "{:.3f}",
+                      "Typical |pull|": "{:.1f}"}, na_rep="–"))

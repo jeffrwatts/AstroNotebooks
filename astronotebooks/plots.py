@@ -1,7 +1,6 @@
 """Every plot the notebooks draw."""
 
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 
 # Colors: one hue per job, with marker shapes as a second cue for color-blind readers.
@@ -219,14 +218,12 @@ def plot_distance_check(d_mpc, d_err_mpc, ned, title):
     return fig, axes
 
 
-def plot_band_fit(res, fit, band, my_observer=None, title=None, excluded=None):
+def plot_band_fit(res, fit, band, my_observer=None, title=None):
     """One band of the SALT2 fit, in detail.
 
     Top: the model light curve and every observation used in the fit.
     Bottom: each point's distance from the curve (data - model, in mag).
     Points from `my_observer` are drawn larger, in black, so they stand out.
-    `excluded` (residuals of set-aside observers, from fit_residuals) is drawn
-    hollow: compared with the model, but not used to fit it.
     """
     from .supernova import SALT2_BANDS, ZPSYS
 
@@ -237,7 +234,6 @@ def plot_band_fit(res, fit, band, my_observer=None, title=None, excluded=None):
         return None
     mine = d[d["observer"] == my_observer] if my_observer else d.iloc[0:0]
     others = d.drop(mine.index)
-    out = excluded[excluded["FILT"] == band] if excluded is not None else d.iloc[0:0]
 
     t0 = fit.get("t0")
     grid = np.linspace(max(-10, d["phase"].min() - 3), 50, 400)
@@ -254,11 +250,6 @@ def plot_band_fit(res, fit, band, my_observer=None, title=None, excluded=None):
     ax.errorbar(others["phase"], others["MAG"], yerr=others["MERR"], fmt=marker, ms=5,
                 color=color, alpha=0.55, elinewidth=0.8, capsize=0, zorder=2,
                 label=f"other observers ({len(others)} points)")
-    if len(out):
-        ax.errorbar(out["phase"], out["MAG"], yerr=out["MERR"], fmt=marker, ms=6, mfc="none",
-                    mec=color, color=color, alpha=0.9, elinewidth=0.6, capsize=0, zorder=2,
-                    label=f"set aside, not fitted: {', '.join(sorted(out['observer'].unique()))} "
-                          f"({len(out)} points)")
     if len(mine):
         ax.errorbar(mine["phase"], mine["MAG"], yerr=mine["MERR"], fmt=marker, ms=9,
                     color=INK, mec="white", mew=0.8, elinewidth=1.2, capsize=3, zorder=4,
@@ -267,9 +258,8 @@ def plot_band_fit(res, fit, band, my_observer=None, title=None, excluded=None):
     ax.plot([peak_day], [peak], marker="*", ms=12, color=color, mec=INK, mew=0.6, zorder=5,
             ls="none", label=f"model peak: {peak:.2f} mag on day {peak_day:+.1f}")
     _style(ax, "", f"{band} magnitude", title or f"{band} band: data vs. SALT2 model", invert_y=True)
-    mags = pd.concat([d["MAG"], out["MAG"]])
-    lo = np.nanmin([mags.min(), peak]) - 0.25
-    hi = np.nanmax([mags.max(), np.nanmax(model)]) + 0.25
+    lo = np.nanmin([d["MAG"].min(), peak]) - 0.25
+    hi = np.nanmax([d["MAG"].max(), np.nanmax(model)]) + 0.25
     ax.set_ylim(hi, lo)
     ax.legend(frameon=False, loc="upper right", fontsize=9)
 
@@ -278,9 +268,6 @@ def plot_band_fit(res, fit, band, my_observer=None, title=None, excluded=None):
     axr.axhline(0, color=color, lw=1.5)
     axr.errorbar(others["phase"], others["resid"], yerr=others["MERR"], fmt=marker, ms=4,
                  color=color, alpha=0.55, elinewidth=0.8, capsize=0)
-    if len(out):
-        axr.errorbar(out["phase"], out["resid"], yerr=out["MERR"], fmt=marker, ms=5, mfc="none",
-                     mec=color, color=color, alpha=0.9, elinewidth=0.6, capsize=0)
     if len(mine):
         axr.errorbar(mine["phase"], mine["resid"], yerr=mine["MERR"], fmt=marker, ms=8,
                      color=INK, mec="white", mew=0.8, elinewidth=1.2, capsize=3, zorder=4)
@@ -289,8 +276,7 @@ def plot_band_fit(res, fit, band, my_observer=None, title=None, excluded=None):
                          textcoords="offset points", fontsize=8, color=INK, va="center")
     _style(axr, "days from B-band peak (t0)", "data − model\n(mag)", "", invert_y=True)
     lim = max(0.15, np.nanpercentile(np.abs(d["resid"]), 98) * 1.15,
-              np.abs(mine["resid"]).max() * 1.25 if len(mine) else 0,
-              np.abs(out["resid"]).max() * 1.2 if len(out) else 0)
+              np.abs(mine["resid"]).max() * 1.25 if len(mine) else 0)
     axr.set_ylim(lim, -lim)   # inverted: brighter than the model is up, as in the top panel
     axr.text(0.005, 0.95, "brighter than model ↑", transform=axr.transAxes, fontsize=8,
              color=INK_2, va="top")
