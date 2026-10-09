@@ -16,6 +16,12 @@ $$ d = 10^{\,(m - M + 5)/5} \text{ parsecs} $$
 
 Each notebook is a different way of working out $M$.
 
+A third notebook, [`bayestar_dust_map.ipynb`](bayestar_dust_map.ipynb), is for
+exploring the Bayestar19 3D dust map the variable star notebook corrects with:
+all-sky maps at several distances, the dust profile toward any target, and a
+bird's-eye view of the dust in the Galactic plane. It needs the dust map
+download (step 4 below).
+
 ---
 
 ## Installation
@@ -173,11 +179,12 @@ its class. For a supernova, give its host galaxy.
 ```
 variable_star_distance.ipynb   the variable star notebook
 sn1a_distance.ipynb            the supernova notebook
+bayestar_dust_map.ipynb        explore the Bayestar19 3D dust map
 photometry/                    sample AAVSO reports and downloads
 astronotebooks/                helper library used by the notebooks
     aavso.py                       read AAVSO files
     catalogs.py                    online lookups: VSX, SIMBAD, Gaia, NED, IRSA
-    dust.py                        Bayestar19 3D dust map
+    dust.py                        Bayestar19 3D dust map (download, queries)
     relations.py                   published calibration constants (with citations)
     supernova.py                   SALT2 fitting helpers
     plots.py, report.py            plots and summary tables
