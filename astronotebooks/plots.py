@@ -238,7 +238,7 @@ def plot_band_fit(res, fit, band, my_observer=None, title=None):
     others = d.drop(mine.index)
 
     t0 = fit.get("t0")
-    grid = np.linspace(max(-10, d["phase"].min() - 3), 50, 400)
+    grid = np.linspace(max(fit.mintime() - t0, d["phase"].min() - 3), 50, 400)   # no earlier than the model goes
     with np.errstate(all="ignore"):
         model = fit.bandmag(SALT2_BANDS[band], ZPSYS, t0 + grid)
     peak = np.nanmin(model)

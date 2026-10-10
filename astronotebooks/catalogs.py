@@ -7,6 +7,7 @@ stop the rest of a notebook.
 
 import contextlib
 import io
+import time
 import urllib.parse
 
 import numpy as np
@@ -114,12 +115,21 @@ def gaia_distance(name, radius_arcsec=3.0):
 # Galaxies: NED redshift, NED-D distances, Milky Way dust
 # --------------------------------------------------------------------------
 
-def _ned_table(endpoint, name):
+def _ned_table(endpoint, name, attempts=3, pause_s=5):
     from astropy.io.votable import parse_single_table
 
+    # NED is often briefly slow or unreachable, so try a few times before giving up.
     url = f"https://ned.ipac.caltech.edu/NED::API/{endpoint}"
-    r = requests.get(url, params={"TARGET": name}, timeout=30, headers=_HEADERS)
-    r.raise_for_status()
+    for attempt in range(1, attempts + 1):
+        try:
+            r = requests.get(url, params={"TARGET": name}, timeout=30, headers=_HEADERS)
+            r.raise_for_status()
+            break
+        except (requests.ConnectionError, requests.Timeout) as e:
+            if attempt == attempts:
+                raise
+            print(f"  NED {endpoint} attempt {attempt} failed ({type(e).__name__}), retrying in {pause_s} s")
+            time.sleep(pause_s)
     df = parse_single_table(io.BytesIO(r.content)).to_table().to_pandas()
     for col in df.columns:
         if df[col].dtype == object:

@@ -34,6 +34,8 @@ TRIPP = {
     "beta": 3.09, "beta_err": 0.04,       # Brout et al. (2022), Table 2 (BS21 baseline)
     "M_B0": -19.253, "M_B0_err": 0.027,   # Riess et al. (2022), Cepheid-anchored
     "rms": 0.171,                         # Brout et al. (2022): scatter of real SNe around the relation
+    "x1_range": (-3.0, 3.0),              # Brout et al. (2022): stretch and color cuts on the sample
+    "c_range": (-0.3, 0.3),               #   these constants were fit to; outside them they're extrapolation
     "H0": 73.04,                          # Riess et al. (2022): the Hubble constant this implies
     "reference": "Brout et al. (2022), ApJ 938, 110; Riess et al. (2022), ApJ 934, L7",
 }
