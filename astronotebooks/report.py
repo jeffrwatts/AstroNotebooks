@@ -70,19 +70,19 @@ def observer_fit_table(res, band, my_observer=None, max_rows=15):
     Long tables are trimmed to the `max_rows` observers with the most points
     (plus `my_observer`).
     """
-    d = res[res["FILT"] == band]
+    d = res[res["band"] == band]
     t = (d.groupby("observer")
            .agg(points=("resid", "size"),
                 first_day=("phase", "min"), last_day=("phase", "max"),
                 offset=("resid", "median"),
                 scatter=("resid", "std"),
-                typical_error=("MERR", "median"),
+                typical_error=("uncertainty", "median"),
                 abs_pull=("pull", lambda p: np.median(np.abs(p))))
            .sort_values("points", ascending=False)
            .reset_index())
     if len(t) > max_rows:   # the busiest observers, plus yours wherever it ranks
         keep = t.index[:max_rows].union(t.index[t["observer"] == my_observer])
-        print(f"showing the {max_rows} observers with the most {band}-band points "
+        print(f"showing the {max_rows} observers with the most {band} points "
               f"(of {len(t)}){', plus ' + my_observer if my_observer in set(t['observer'][max_rows:]) else ''}")
         t = t.loc[keep]
     t.columns = ["Observer", "Points", "First day", "Last day", "Offset (mag)",

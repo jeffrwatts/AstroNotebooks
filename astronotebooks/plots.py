@@ -8,13 +8,13 @@ BLUE, ORANGE, GRAY = "#2a78d6", "#eb6834", "#898781"
 INK, INK_2, GRID = "#0b0b0b", "#52514e", "#e1e0d9"
 GOOD, WARN, BAD = "#0ca30c", "#c98500", "#d03b3b"
 
-# Supernova bands, ordered blue -> red by wavelength.
+# Supernova bands (AID names), ordered blue -> red by wavelength.
 BAND_STYLES = {
-    "U": ("#4a3aa7", "v"),
-    "B": ("#2a78d6", "o"),
-    "V": ("#008300", "s"),
-    "R": ("#eda100", "^"),
-    "I": ("#e34948", "D"),
+    "Johnson U": ("#4a3aa7", "v"),
+    "Johnson B": ("#2a78d6", "o"),
+    "Johnson V": ("#008300", "s"),
+    "Cousins R": ("#eda100", "^"),
+    "Cousins I": ("#e34948", "D"),
 }
 
 
@@ -151,19 +151,19 @@ def plot_multiband(df, title, excluded=None, t0_guess=None, phase_window=None):
     shading marks data outside `phase_window` (dropped from the fit).
     """
     bands = list(BAND_STYLES)
-    use = df[df["FILT"].isin(bands)].dropna(subset=["DATE", "MAG", "MERR"])
-    out = (excluded[excluded["FILT"].isin(bands)].dropna(subset=["DATE", "MAG", "MERR"])
+    use = df[df["band"].isin(bands)].dropna(subset=["jd", "mag", "uncertainty"])
+    out = (excluded[excluded["band"].isin(bands)].dropna(subset=["jd", "mag", "uncertainty"])
            if excluded is not None else use.iloc[0:0])
-    jd0 = np.floor(min(use["DATE"].min(), out["DATE"].min() if len(out) else np.inf))
+    jd0 = np.floor(min(use["jd"].min(), out["jd"].min() if len(out) else np.inf))
 
     fig, ax = plt.subplots(figsize=(10, 5.5))
     for band, (color, marker) in BAND_STYLES.items():
-        b_use, b_out = use[use["FILT"] == band], out[out["FILT"] == band]
+        b_use, b_out = use[use["band"] == band], out[out["band"] == band]
         if len(b_use):
-            ax.scatter(b_use["DATE"] - jd0, b_use["MAG"], s=24, marker=marker, color=color,
+            ax.scatter(b_use["jd"] - jd0, b_use["mag"], s=24, marker=marker, color=color,
                        alpha=0.8, edgecolors="white", linewidths=0.4, label=f"{band} ({len(b_use)})")
         if len(b_out):
-            ax.scatter(b_out["DATE"] - jd0, b_out["MAG"], s=24, marker=marker,
+            ax.scatter(b_out["jd"] - jd0, b_out["mag"], s=24, marker=marker,
                        facecolors="none", edgecolors=color, linewidths=1.0)
     if len(out):
         who = ", ".join(sorted(out["observer"].unique()))
@@ -230,9 +230,9 @@ def plot_band_fit(res, fit, band, my_observer=None, title=None):
     from .supernova import SALT2_BANDS, ZPSYS
 
     color, marker = BAND_STYLES[band]
-    d = res[res["FILT"] == band]
+    d = res[res["band"] == band]
     if len(d) == 0:
-        print(f"No {band}-band points were used in the fit for this supernova.")
+        print(f"No {band} points were used in the fit for this supernova.")
         return None
     mine = d[d["observer"] == my_observer] if my_observer else d.iloc[0:0]
     others = d.drop(mine.index)
@@ -249,29 +249,29 @@ def plot_band_fit(res, fit, band, my_observer=None, title=None):
 
     # --- light curve ---
     ax.plot(grid, model, color=color, lw=2, zorder=3, label="SALT2 best fit")
-    ax.errorbar(others["phase"], others["MAG"], yerr=others["MERR"], fmt=marker, ms=5,
+    ax.errorbar(others["phase"], others["mag"], yerr=others["uncertainty"], fmt=marker, ms=5,
                 color=color, alpha=0.55, elinewidth=0.8, capsize=0, zorder=2,
                 label=f"other observers ({len(others)} points)")
     if len(mine):
-        ax.errorbar(mine["phase"], mine["MAG"], yerr=mine["MERR"], fmt=marker, ms=9,
+        ax.errorbar(mine["phase"], mine["mag"], yerr=mine["uncertainty"], fmt=marker, ms=9,
                     color=INK, mec="white", mew=0.8, elinewidth=1.2, capsize=3, zorder=4,
                     label=f"{my_observer} ({len(mine)} points)")
     ax.axvline(0, color=GRAY, ls=":", lw=1)
     ax.plot([peak_day], [peak], marker="*", ms=12, color=color, mec=INK, mew=0.6, zorder=5,
             ls="none", label=f"model peak: {peak:.2f} mag on day {peak_day:+.1f}")
     _style(ax, "", f"{band} magnitude", title or f"{band} band: data vs. SALT2 model", invert_y=True)
-    lo = np.nanmin([d["MAG"].min(), peak]) - 0.25
-    hi = np.nanmax([d["MAG"].max(), np.nanmax(model)]) + 0.25
+    lo = np.nanmin([d["mag"].min(), peak]) - 0.25
+    hi = np.nanmax([d["mag"].max(), np.nanmax(model)]) + 0.25
     ax.set_ylim(hi, lo)
     ax.legend(frameon=False, loc="upper right", fontsize=9)
 
     # --- residuals ---
     axr.axhspan(-0.05, 0.05, color=GRAY, alpha=0.15, lw=0, label="±0.05 mag")
     axr.axhline(0, color=color, lw=1.5)
-    axr.errorbar(others["phase"], others["resid"], yerr=others["MERR"], fmt=marker, ms=4,
+    axr.errorbar(others["phase"], others["resid"], yerr=others["uncertainty"], fmt=marker, ms=4,
                  color=color, alpha=0.55, elinewidth=0.8, capsize=0)
     if len(mine):
-        axr.errorbar(mine["phase"], mine["resid"], yerr=mine["MERR"], fmt=marker, ms=8,
+        axr.errorbar(mine["phase"], mine["resid"], yerr=mine["uncertainty"], fmt=marker, ms=8,
                      color=INK, mec="white", mew=0.8, elinewidth=1.2, capsize=3, zorder=4)
         for _, r in mine.iterrows():
             axr.annotate(f"{r['resid']:+.3f}", (r["phase"], r["resid"]), xytext=(6, 0),

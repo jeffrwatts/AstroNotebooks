@@ -1,21 +1,26 @@
 """Read AAVSO photometry files.
 
-Two formats are supported, auto-detected, and normalized onto the same
-columns (NAME, DATE, MAG, MERR, FILT) so the notebooks don't care which
-one they were given:
+Two formats, each loaded with its own function and kept in its own schema,
+so the column names match what AAVSO documents (and what other observers
+call them):
 
 - AAVSO Extended Format: the report you export from VPhot or ASTAP after
-  reducing your own images (transformed or not).
+  reducing your own images. `load_extended_report()` -> NAME, DATE, MAG,
+  MERR, FILT, ... with short band codes ("V").
 - AAVSO International Database (AID) CSV download: existing observations
-  of any star, from https://www.aavso.org/data-download
+  of any star, from https://www.aavso.org/data-download.
+  `load_aid_download()` -> target, jd, mag, uncertainty, band, observer, ...
+  with full band names ("Johnson V").
+
+When one notebook needs to treat both alike, `aid_as_extended()` renames an
+AID download onto the Extended Format columns and band codes.
 """
 
 from pathlib import Path
 
 import pandas as pd
 
-# AID downloads use full band names ("Johnson V"); Extended Format uses short
-# codes ("V"). Map AID names onto the short codes (matched case-insensitively).
+# AID band names -> Extended Format band codes (matched case-insensitively).
 # Anything not listed passes through unchanged.
 AID_BAND_CODES = {
     "johnson u": "U", "johnson b": "B", "johnson v": "V",
@@ -27,34 +32,22 @@ AID_BAND_CODES = {
     "visual": "VISUAL",
 }
 
-# Column spellings seen across AID exports (keyed lowercase).
-AID_COLUMNS = {
+# AID column -> the Extended Format column holding the same thing.
+AID_TO_EXTENDED = {
+    "target": "NAME",
     "jd": "DATE",
-    "mag": "MAG", "magnitude": "MAG",
+    "mag": "MAG",
     "uncertainty": "MERR",
     "band": "FILT",
-    "target": "NAME", "star name": "NAME",
 }
 
 
-def load_aavso_report(path):
-    """Load an AAVSO Extended Format report or AID CSV download.
+def load_extended_report(path):
+    """Load an AAVSO Extended Format report (VPhot / ASTAP export).
 
-    Returns a DataFrame with (at least) NAME, DATE (JD), MAG, MERR, FILT.
-    AID 'fainter than' rows (upper limits, not measurements) are dropped.
+    Columns come from the report's own #NAME,DATE,... header line.
     """
     path = Path(path)
-    first_line = next((l for l in path.read_text().splitlines() if l.strip()), "")
-    # Extended Format always starts with a '#KEY=VALUE' line (#TYPE=EXTENDED).
-    # An AID CSV can also start with '#' (its row-counter column is named '#'),
-    # so test for the '#KEY=' shape rather than just a leading '#'.
-    key, sep, _ = first_line.partition("=")
-    if sep and key.startswith("#") and key[1:].strip().isalpha():
-        return _load_extended_format(path)
-    return _load_aid_download(path)
-
-
-def _load_extended_format(path):
     delim = ","
     header = None
     rows = []
@@ -73,7 +66,8 @@ def _load_extended_format(path):
             rows.append(line.split(delim))
 
     if header is None:
-        raise ValueError(f"Could not find the #NAME,DATE,... header line in {path}")
+        raise ValueError(f"Could not find the #NAME,DATE,... header line in {path} "
+                         "(is it an AID download? use load_aid_download)")
 
     df = pd.DataFrame(rows, columns=header)
     for col in ["DATE", "MAG", "MERR"]:
@@ -82,20 +76,36 @@ def _load_extended_format(path):
     return df
 
 
-def _load_aid_download(path):
-    df = pd.read_csv(path, low_memory=False)
-    df = df.rename(columns={c: AID_COLUMNS.get(c.strip().lower(), c) for c in df.columns})
-    df["FILT"] = df["FILT"].map(lambda b: AID_BAND_CODES.get(str(b).strip().lower(), b))
-    for col in ["DATE", "MAG", "MERR"]:
-        df[col] = pd.to_numeric(df[col], errors="coerce")
-    df.loc[df["MERR"] <= 0, "MERR"] = float("nan")   # a 0.000 uncertainty means "not reported"
+def load_aid_download(path):
+    """Load an AAVSO International Database CSV download.
 
-    if "fainterthan" in df.columns:
-        faint = df["fainterthan"].astype(str).str.strip().str.lower() == "true"
-        if faint.any():
-            print(f"  dropped {int(faint.sum())} 'fainter than' (non-detection) rows")
-            df = df.loc[~faint]
+    'Fainter than' rows (upper limits, not measurements) are dropped.
+    """
+    df = pd.read_csv(path, low_memory=False)
+    if "jd" not in df.columns:
+        raise ValueError(f"No 'jd' column in {path} "
+                         "(is it an Extended Format report? use load_extended_report)")
+    for col in ["jd", "mag", "uncertainty"]:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+    df.loc[df["uncertainty"] <= 0, "uncertainty"] = float("nan")   # a 0.000 uncertainty means "not reported"
+
+    faint = df["fainterthan"].astype(str).str.strip().str.lower() == "true"
+    if faint.any():
+        print(f"  dropped {int(faint.sum())} 'fainter than' (non-detection) rows")
+        df = df.loc[~faint]
     return df
+
+
+def aid_as_extended(df):
+    """An AID download renamed onto the Extended Format schema.
+
+    jd/mag/uncertainty/band/target become DATE/MAG/MERR/FILT/NAME, and band
+    names become Extended Format codes ("Johnson V" -> "V"). The values are
+    otherwise untouched; other columns (observer, airmass, ...) keep their names.
+    """
+    out = df.rename(columns=AID_TO_EXTENDED)
+    out["FILT"] = out["FILT"].map(lambda b: AID_BAND_CODES.get(str(b).strip().lower(), b))
+    return out
 
 
 def split_by_observer(df, exclude):
@@ -116,6 +126,7 @@ def get_band_series(df, band):
     """Time (JD) and magnitude arrays for one filter, sorted by time.
 
     Points with no magnitude or no reported uncertainty are dropped.
+    Expects Extended Format columns (use `aid_as_extended` on an AID download).
     """
     d = df.loc[df["FILT"] == band].dropna(subset=["DATE", "MAG"]).sort_values("DATE")
     no_err = d["MERR"].isna()
