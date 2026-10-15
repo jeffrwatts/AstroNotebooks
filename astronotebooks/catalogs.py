@@ -82,25 +82,31 @@ def gaia_distance(name, radius_arcsec=3.0):
     coord = simbad_coords(name)
     if coord is None:
         return None
-    adql = f"""
-    SELECT g.source_id, g.parallax, g.parallax_error, g.phot_g_mean_mag,
-           bj.r_med_geo, bj.r_lo_geo, bj.r_hi_geo
-    FROM gaiadr3.gaia_source AS g
-    LEFT JOIN external.gaiaedr3_distance AS bj ON g.source_id = bj.source_id
-    WHERE 1=CONTAINS(POINT('ICRS', g.ra, g.dec),
+    # Two quick queries instead of one cone search JOINed to the Bailer-Jones table:
+    # the archive aborts synchronous jobs after ~10 s (Error 408), and the JOIN
+    # often runs longer than that. A lookup by source_id is fast.
+    cone = f"""
+    SELECT source_id, parallax, parallax_error, phot_g_mean_mag
+    FROM gaiadr3.gaia_source
+    WHERE 1=CONTAINS(POINT('ICRS', ra, dec),
                      CIRCLE('ICRS', {coord.ra.deg}, {coord.dec.deg}, {radius_arcsec / 3600.0}))
-    ORDER BY g.phot_g_mean_mag ASC
+    ORDER BY phot_g_mean_mag ASC
     """
     try:
-        t = Gaia.launch_job(adql).get_results()
+        t = Gaia.launch_job(cone).get_results()
+        if len(t) == 0:
+            print(f"  no Gaia source within {radius_arcsec}\" of {name!r}")
+            return None
+        row = t[0]   # brightest source in the cone: the target itself
+        bj = Gaia.launch_job(f"""
+        SELECT r_med_geo, r_lo_geo, r_hi_geo FROM external.gaiaedr3_distance
+        WHERE source_id = {int(row["source_id"])}
+        """).get_results()
     except Exception as e:
         print(f"  Gaia query failed for {name!r}: {e}")
         return None
-    if len(t) == 0:
-        print(f"  no Gaia source within {radius_arcsec}\" of {name!r}")
-        return None
-
-    row = t[0]   # brightest source in the cone: the target itself
+    dist = {k: bj[0][k] for k in bj.colnames} if len(bj) else dict.fromkeys(bj.colnames, np.nan)
+    row = {**{k: row[k] for k in row.colnames}, **dist}
     return {
         "source_id": int(row["source_id"]),
         "parallax_mas": float(row["parallax"]),
